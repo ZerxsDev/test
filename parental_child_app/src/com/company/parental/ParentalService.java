@@ -86,9 +86,11 @@ public class ParentalService extends Service {
 
     private void tick() {
         // 1) baca perintah dari firebase
-        FireClient.get("commands", cmds -> {
-            if (cmds == null) { publishState(); return; }
-            try { handleCommands(cmds); } catch (Exception e) { publishState(); }
+        FireClient.get("commands", new FireClient.JsonCb() {
+            @Override public void run(JSONObject cmds) {
+                if (cmds == null) { publishState(); return; }
+                try { handleCommands(cmds); } catch (Exception e) { publishState(); }
+            }
         });
     }
 
@@ -144,7 +146,9 @@ public class ParentalService extends Service {
             ack.put("ts", cmdTs);
             ack.put("appliedAt", System.currentTimeMillis());
             ParentalService.saveAck(this, cmdTs);
-            FireClient.put("commands_ack", ack, ok -> publishState());
+            FireClient.put("commands_ack", ack, new FireClient.Cb() {
+                @Override public void run(Boolean ok) { publishState(); }
+            });
         } else {
             publishState();
         }
@@ -158,7 +162,9 @@ public class ParentalService extends Service {
     private void publishState() {
         try {
             JSONObject payload = Store.toPayload(this);
-            FireClient.put("state", payload, ok -> { /* retry pada tick berikutnya bila gagal */ });
+            FireClient.put("state", payload, new FireClient.Cb() {
+                @Override public void run(Boolean ok) { /* retry pada tick berikutnya bila gagal */ }
+            });
         } catch (Exception ignored) { }
     }
 

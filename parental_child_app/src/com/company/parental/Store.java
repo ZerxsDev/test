@@ -53,9 +53,11 @@ public final class Store {
     }
 
     public static void setBlocked(Context c, Set<String> pkgs) {
-        JSONArray a = new JSONArray();
-        for (String p : pkgs) a.put(p);
-        sp(c).edit().putString(K_BLOCK, a.toString()).apply();
+        try {
+            JSONArray a = new JSONArray();
+            for (String p : pkgs) a.put(p);
+            sp(c).edit().putString(K_BLOCK, a.toString()).apply();
+        } catch (Exception ignored) { }
     }
 
     public static boolean isBlocked(Context c, String pkg) {

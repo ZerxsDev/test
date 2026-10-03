@@ -59,6 +59,11 @@ public final class Config {
         if (apiKey == null) apiKey = "";
         // pastikan trailing slash hilang
         while (databaseUrl.endsWith("/")) databaseUrl = databaseUrl.substring(0, databaseUrl.length() - 1);
+
+        // sinkronkan ke klien REST Firebase
+        FireClient.dbBase = databaseUrl;
+        FireClient.apiKey = apiKey;
+        FireClient.deviceId = deviceId();
     }
 
     private Config() { }

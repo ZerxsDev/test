@@ -22,93 +22,112 @@ import java.util.concurrent.Executors;
  *   devices/{deviceId}/state            -> ditulis anak (info + status)
  *   devices/{deviceId}/commands         -> ditulis orang tua (lock/unlock/blockApps/password)
  *   devices/{deviceId}/commands_ack     -> ditulis anak setelah command dieksekusi
+ *
+ * CATATAN kompatibilitas: TIDAK memakai lambda / method reference Java 8,
+ * karena builder (Steelwork/APKBUILDER) mengompilasi dengan source level 1.7.
  */
 public final class FireClient {
 
     public interface Cb { void run(Boolean ok); }
+    public interface JsonCb { void run(JSONObject o); }
 
     private static final ExecutorService EX = Executors.newFixedThreadPool(2);
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
+    /** Diisi oleh Config.load(): URL root RTDB, mis. https://xxx.firebaseio.com */
+    public static String dbBase = "";
+    /** Diisi oleh Config.load(): id perangkat ini. */
+    public static String deviceId = "device";
+    /** Diisi oleh Config.load(): API key spark plan (opsional, utk query param auth). */
+    public static String apiKey = "";
+
     /** Bangun URL child-path dengan auth key. */
     private static String url(String childPath) {
-        String u = Config.databaseUrl + "/devices/" + UriEnc.encode(Config.deviceId())
+        String u = dbBase + "/devices/" + UriEnc.encode(deviceId)
                 + "/" + childPath + ".json";
         return withAuth(u);
     }
 
     private static String withAuth(String u) {
-        if (Config.apiKey != null && !Config.apiKey.isEmpty()
-                && !Config.apiKey.startsWith("AIzaSy_REPLACE")) {
-            u += "?auth=" + Config.apiKey;
+        if (apiKey != null && !apiKey.isEmpty()
+                && !apiKey.startsWith("AIzaSy_REPLACE")) {
+            u += "?auth=" + apiKey;
         }
         return u;
     }
 
     /** PUT objek JSON ke path (mis. "state" atau "commands_ack"). */
     public static void put(final String childPath, final JSONObject body, final Cb cb) {
-        EX.execute(() -> {
-            boolean ok;
-            try {
-                HttpURLConnection c = open(url(childPath), "PUT");
-                OutputStream os = c.getOutputStream();
-                os.write(body.toString().getBytes("UTF-8"));
-                os.flush(); os.close();
-                ok = c.getResponseCode() < 400;
-                c.disconnect();
-            } catch (Exception e) { ok = false; }
-            post(cb, ok);
+        EX.execute(new Runnable() {
+            @Override public void run() {
+                boolean ok;
+                try {
+                    HttpURLConnection c = open(url(childPath), "PUT");
+                    OutputStream os = c.getOutputStream();
+                    os.write(body.toString().getBytes("UTF-8"));
+                    os.flush(); os.close();
+                    ok = c.getResponseCode() < 400;
+                    c.disconnect();
+                } catch (Exception e) { ok = false; }
+                post(cb, ok);
+            }
         });
     }
 
     /** GET JSON dari path (mis. "commands"). */
     public static void get(final String childPath, final JsonCb cb) {
-        EX.execute(() -> {
-            JSONObject out = null;
-            try {
-                HttpURLConnection c = open(url(childPath), "GET");
-                int code = c.getResponseCode();
-                if (code == 200) {
-                    BufferedReader r = new BufferedReader(
-                            new InputStreamReader(c.getInputStream(), "UTF-8"));
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-                    while ((line = r.readLine()) != null) sb.append(line);
-                    r.close();
-                    String txt = sb.toString().trim();
-                    if (!txt.isEmpty() && !txt.equals("null")) out = new JSONObject(txt);
-                }
-                c.disconnect();
-            } catch (Exception ignored) { }
-            final JSONObject f = out;
-            MAIN.post(() -> cb.run(f));
+        EX.execute(new Runnable() {
+            @Override public void run() {
+                JSONObject out = null;
+                try {
+                    HttpURLConnection c = open(url(childPath), "GET");
+                    int code = c.getResponseCode();
+                    if (code == 200) {
+                        BufferedReader r = new BufferedReader(
+                                new InputStreamReader(c.getInputStream(), "UTF-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = r.readLine()) != null) sb.append(line);
+                        r.close();
+                        String txt = sb.toString().trim();
+                        if (!txt.isEmpty() && !txt.equals("null")) out = new JSONObject(txt);
+                    }
+                    c.disconnect();
+                } catch (Exception ignored) { }
+                final JSONObject f = out;
+                MAIN.post(new Runnable() {
+                    @Override public void run() { cb.run(f); }
+                });
+            }
         });
     }
 
-    /** Daftar semua perangkat (untuk web panel dicontohkan di JS; dipakai app utk self-check). */
+    /** Daftar semua perangkat node "devices". */
     public static void getAllDevices(final JsonCb cb) {
-        EX.execute(() -> {
-            JSONObject out = null;
-            try {
-                HttpURLConnection c = open(withAuth(Config.databaseUrl + "/devices.json"), "GET");
-                if (c.getResponseCode() == 200) {
-                    BufferedReader r = new BufferedReader(
-                            new InputStreamReader(c.getInputStream(), "UTF-8"));
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-                    while ((line = r.readLine()) != null) sb.append(line);
-                    r.close();
-                    String txt = sb.toString().trim();
-                    if (!txt.isEmpty() && !txt.equals("null")) out = new JSONObject(txt);
-                }
-                c.disconnect();
-            } catch (Exception ignored) { }
-            final JSONObject f = out;
-            MAIN.post(() -> cb.run(f));
+        EX.execute(new Runnable() {
+            @Override public void run() {
+                JSONObject out = null;
+                try {
+                    HttpURLConnection c = open(withAuth(dbBase + "/devices.json"), "GET");
+                    if (c.getResponseCode() == 200) {
+                        BufferedReader r = new BufferedReader(
+                                new InputStreamReader(c.getInputStream(), "UTF-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String line;
+                        while ((line = r.readLine()) != null) sb.append(line);
+                        r.close();
+                        String txt = sb.toString().trim();
+                        if (!txt.isEmpty() && !txt.equals("null")) out = new JSONObject(txt);
+                    }
+                    c.disconnect();
+                } catch (Exception ignored) { }
+                final JSONObject f = out;
+                MAIN.post(new Runnable() {
+                    @Override public void run() { cb.run(f); }
+                });
+            }
         });
     }
-
-    public interface JsonCb { void run(JSONObject o); }
 
     private static HttpURLConnection open(String u, String method) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();
@@ -121,14 +140,16 @@ public final class FireClient {
         return c;
     }
 
-    private static void post(Cb cb, boolean ok) {
-        if (cb != null) MAIN.post(() -> cb.run(ok));
+    private static void post(final Cb cb, final boolean ok) {
+        if (cb != null) MAIN.post(new Runnable() {
+            @Override public void run() { cb.run(ok); }
+        });
     }
 
-    /** Encoder path-safe (firebase menolak karakter . # $ [ ]). */
+    /** Encoder path-safe (firebase menolak karakter . # $ [ ] / ). */
     static final class UriEnc {
         static String encode(String s) {
-            return s.replaceAll("[.#$\\[\\]\\*/]", "_");
+            return s.replaceAll("[.#$\\[\\]*/]", "_");
         }
     }
 
