@@ -94,9 +94,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setPassword(final String pass) {
             Store.setPassword(MainActivity.this, pass == null ? "" : pass);
-            runOnUiThread(() -> {
-                Toast.makeText(MainActivity.this, "Password kunci disimpan", Toast.LENGTH_SHORT).show();
-                pushStateToHtml();
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    Toast.makeText(MainActivity.this, "Password kunci disimpan", Toast.LENGTH_SHORT).show();
+                    pushStateToHtml();
+                }
             });
         }
 
@@ -125,7 +127,7 @@ public class MainActivity extends Activity {
                 res = "{\"ok\":true}";
             }
             final String fr = res;
-            runOnUiThread(MainActivity.this::pushStateToHtml);
+            runOnUiThread(new Runnable() { @Override public void run() { pushStateToHtml(); } });
             return fr;
         }
 
@@ -144,7 +146,7 @@ public class MainActivity extends Activity {
         public String unlockNow() {
             Store.setLockEnabled(MainActivity.this, false);
             LockCtl.unlock(MainActivity.this);
-            runOnUiThread(MainActivity.this::pushStateToHtml);
+            runOnUiThread(new Runnable() { @Override public void run() { pushStateToHtml(); } });
             return "{\"ok\":true}";
         }
 
@@ -183,7 +185,7 @@ public class MainActivity extends Activity {
             if (block) s.add(pkg); else s.remove(pkg);
             Store.setBlocked(MainActivity.this, s);
             ensureBlockerPerms();
-            runOnUiThread(MainActivity.this::pushStateToHtml);
+            runOnUiThread(new Runnable() { @Override public void run() { pushStateToHtml(); } });
             return "{\"ok\":true,\"blocked\":" + block + ",\"count\":" + s.size() + "}";
         }
 
@@ -194,30 +196,34 @@ public class MainActivity extends Activity {
             if (csvPkgs != null && !csvPkgs.trim().isEmpty())
                 for (String p : csvPkgs.split(",")) if (!p.trim().isEmpty()) s.add(p.trim());
             Store.setBlocked(MainActivity.this, s);
-            runOnUiThread(MainActivity.this::pushStateToHtml);
+            runOnUiThread(new Runnable() { @Override public void run() { pushStateToHtml(); } });
         }
 
         /** Minta izin device admin lewat layar sistem (untuk force-lock). */
         @JavascriptInterface
         public void requestAdmin() {
-            runOnUiThread(() -> {
-                if (LockCtl.isAdminActive(MainActivity.this)) return;
-                ComponentName cn = new ComponentName(MainActivity.this, AdminReceiver.class);
-                Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
-                intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, cn);
-                intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                        "Diperlukan agar orang tua dapat mengunci layar perangkat anak.");
-                try { startActivityForResult(intent, 1001); } catch (Exception ignored) { }
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    if (LockCtl.isAdminActive(MainActivity.this)) return;
+                    ComponentName cn = new ComponentName(MainActivity.this, AdminReceiver.class);
+                    Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+                    intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, cn);
+                    intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                            "Diperlukan agar orang tua dapat mengunci layar perangkat anak.");
+                    try { startActivityForResult(intent, 1001); } catch (Exception ignored) { }
+                }
             });
         }
 
         /** Buka Settings tampilkan-di-atas-aplikasi-lain bila belum diizinkan. */
         @JavascriptInterface
         public void requestOverlay() {
-            runOnUiThread(() -> {
-                if (!BlockerService.canDraw(MainActivity.this)) {
-                    try { startActivity(BlockerService.overlaySettingsIntent(MainActivity.this)); }
-                    catch (Exception ignored) { }
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    if (!BlockerService.canDraw(MainActivity.this)) {
+                        try { startActivity(BlockerService.overlaySettingsIntent(MainActivity.this)); }
+                        catch (Exception ignored) { }
+                    }
                 }
             });
         }
@@ -225,9 +231,11 @@ public class MainActivity extends Activity {
         /** Buka Settings akses penggunaan (usage access) utk deteksi foreground. */
         @JavascriptInterface
         public void requestUsageAccess() {
-            runOnUiThread(() -> {
-                try { startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)); }
-                catch (Exception ignored) { }
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    try { startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)); }
+                    catch (Exception ignored) { }
+                }
             });
         }
 
@@ -235,7 +243,13 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void syncNow() {
             startParentalServices();
-            FireClient.get("commands", cmds -> runOnUiThread(MainActivity.this::pushStateToHtml));
+            FireClient.get("commands", new FireClient.JsonCb() {
+                @Override public void run(JSONObject cmds) {
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() { pushStateToHtml(); }
+                    });
+                }
+            });
         }
     }
 
@@ -255,9 +269,11 @@ public class MainActivity extends Activity {
 
     private void ensureBlockerPerms() {
         if (!BlockerService.canDraw(this)) {
-            runOnUiThread(() -> {
-                try { startActivity(BlockerService.overlaySettingsIntent(this)); }
-                catch (Exception ignored) { }
+            runOnUiThread(new Runnable() {
+                @Override public void run() {
+                    try { startActivity(BlockerService.overlaySettingsIntent(MainActivity.this)); }
+                    catch (Exception ignored) { }
+                }
             });
         }
         startParentalServices();

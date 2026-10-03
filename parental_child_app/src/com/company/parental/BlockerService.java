@@ -16,7 +16,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -71,6 +70,7 @@ public class BlockerService extends Service {
         ((TextView) overlay).setGravity(Gravity.CENTER);
         ((TextView) overlay).setBackgroundColor(0xFF101418);
 
+        @SuppressWarnings("deprecation")
         int type = Build.VERSION.SDK_INT >= 26
                 ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 : WindowManager.LayoutParams.TYPE_PHONE;
