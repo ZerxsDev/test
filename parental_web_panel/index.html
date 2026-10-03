@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>parental — Web Panel Orang Tua</title>
+<style>
+  :root{--bg:#0b1020;--card:#141c30;--line:#26314e;--txt:#eef3ff;--mut:#8fa0c4;--ok:#22c55e;--bad:#ef4444;--acc:#3b82f6}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:18px}
+  h1{font-size:20px;margin:0 0 2px}
+  .sub{color:var(--mut);font-size:12px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .card h2{font-size:14px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+  /* kotak perangkat terhubung */
+  .dev{border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:9px;cursor:pointer;transition:.15s}
+  .dev:hover{border-color:var(--acc)}
+  .dev.sel{border-color:var(--acc);background:rgba(59,130,246,.09)}
+  .dev .nm{font-weight:700;font-size:14px}
+  .dev .st{font-size:11px;color:var(--mut);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+  .on{background:var(--ok)}.off{background:var(--bad)}
+  .badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+  .b-ok{background:rgba(34,197,94,.15);color:var(--ok)}
+  .b-bad{background:rgba(239,68,68,.15);color:var(--bad)}
+  button{border:0;border-radius:9px;padding:9px 13px;font-size:13px;font-weight:600;cursor:pointer}
+  .bp{background:var(--acc);color:#fff}.br{background:#37456a;color:var(--txt)}.bx{background:var(--bad);color:#fff}
+  input[type=password],input[type=text]{width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);background:#0d1526;color:var(--txt);font-size:14px;margin:6px 0}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .sw{position:relative;width:46px;height:26px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0}
+  .sl{position:absolute;inset:0;background:#3a4a68;border-radius:26px;transition:.2s;cursor:pointer}
+  .sl:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked+.sl{background:var(--ok)}.sw input:checked+.sl:before{transform:translateX(20px)}
+  #appBox{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:11px;padding:6px 10px;margin-top:8px}
+  .app{display:flex;justify-content:space-between;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line)}
+  .app:last-child{border-bottom:0}
+  .app .nm{font-size:13px}.app .pk{font-size:11px;color:var(--mut)}
+  .log{font-size:12px;color:var(--mut);margin-top:10px;min-height:18px}
+  .cfg label{font-size:12px;color:var(--mut)}
+  .hide{display:none}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>🛡️ parental — Web Panel Orang Tua</h1>
+    <div class="sub">Server: Firebase Realtime Database (Spark plan) • REST API tanpa SDK/gradle</div>
+  </div>
+  <div class="row">
+    <button class="br" onclick="openCfg()">⚙️ Konfigurasi Firebase</button>
+    <button class="bp" onclick="loadDevices()">⟳ Refresh Perangkat</button>
+  </div>
+</div>
+
+<!-- ===== KONFIGURASI ===== -->
+<div class="card cfg hide" id="cfgCard" style="margin-bottom:16px">
+  <h2>Konfigurasi Firebase Spark Plan</h2>
+  <label>Database URL (contoh: https://parental-default-rtdb.firebaseio.com)</label>
+  <input type="text" id="cfgUrl" placeholder="https://xxxx-default-rtdb.firebaseio.com">
+  <label>Auth / API Key (opsional bila rules terbuka utk demo)</label>
+  <input type="password" id="cfgKey" placeholder="AIzaSy...">
+  <div class="row">
+    <button class="bp" onclick="saveCfg()">Simpan &amp; Konek</button>
+    <span class="sub" id="cfgMsg"></span>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- ===== KOTAK PERANGKAT TERHUBUNG ===== -->
+  <div class="card">
+    <h2>📱 Perangkat Terhubung</h2>
+    <div id="devList"><div class="sub">Belum ada perangkat… pastikan aplikasi anak berjalan &amp; konfigurasi benar.</div></div>
+  </div>
+
+  <!-- ===== MENU CONTROL ===== -->
+  <div class="card">
+    <h2>🎛️ Menu Control</h2>
+    <div class="sub" id="selDev">Pilih perangkat di kiri terlebih dahulu.</div>
+
+    <!-- kunci layar + password -->
+    <div style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:12px">
+      <div class="row" style="justify-content:space-between">
+        <div><b>🔒 Kunci Layar Anak</b><div class="sub" id="lockStat">status: -</div></div>
+        <label class="sw"><input type="checkbox" id="lockSw" onchange="sendLock(this.checked)"><span class="sl"></span></label>
+      </div>
+      <label class="sub">Password pembuka (dikirim via HTML ke perangkat anak):</label>
+      <input type="password" id="pw" placeholder="Password baru min 4 karakter">
+      <div class="row">
+        <button class="bp" onclick="sendPassword()">💾 Kirim Password</button>
+        <button class="bx" onclick="sendCmd({action:'lock'})">Kunci Sekarang</button>
+        <button class="br" onclick="sendCmd({action:'unlock'})">Buka Layar</button>
+      </div>
+    </div>
+
+    <!-- blokir aplikasi -->
+    <div style="border:1px solid var(--line);border-radius:11px;padding:12px">
+      <div class="row" style="justify-content:space-between">
+        <div><b>🚫 Blokir Aplikasi</b><div class="sub"><span id="blkN">0</span> dipilih • toggle ON/OFF dari web ini</div></div>
+        <div class="row">
+          <button class="br" onclick="loadAppsForDevice()">Muat Daftar Aplikasi</button>
+          <button class="bp" onclick="applyBlock()">Terapkan Blokir</button>
+        </div>
+      </div>
+      <input type="text" id="aq" placeholder="Cari aplikasi…" oninput="renderApps()" class="" style="margin-top:8px">
+      <div id="appBox"><div class="sub">Muat daftar aplikasi dari perangkat terpilih.</div></div>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+</div>
+
+<script>
+/* ================= STATE LOKAL PANEL ================= */
+const LS = 'parental_panel_cfg';
+let cfg = JSON.parse(localStorage.getItem(LS) || '{}');
+let devices = {};         // id -> {state, commands_ack}
+let selected = null;
+let appCatalog = [];      // hasil muat dari state.deviceApps (opsional) atau manual
+let pendingBlocked = new Set();
+
+if(!cfg.url){ openCfg(); }
+document.getElementById('cfgUrl').value = cfg.url || '';
+document.getElementById('cfgKey').value = cfg.key || '';
+
+function openCfg(){ document.getElementById('cfgCard').classList.toggle('hide'); }
+function saveCfg(){
+  cfg.url = document.getElementById('cfgUrl').value.trim().replace(/\/+$/,'');
+  cfg.key = document.getElementById('cfgKey').value.trim();
+  localStorage.setItem(LS, JSON.stringify(cfg));
+  document.getElementById('cfgMsg').textContent = 'Tersimpan ✓';
+  loadDevices();
+}
+
+function authQS(){ return cfg.key ? ('?auth=' + encodeURIComponent(cfg.key)) : ''; }
+function db(path){ return (cfg.url||'') + path + '.json' + authQS(); }
+
+function log(m){ const e=document.getElementById('log'); e.textContent = m + '  •  ' + new Date().toLocaleTimeString(); }
+
+/* ================= FIREBASE REST ================= */
+async function fbGet(path){
+  if(!cfg.url){ log('❌ Isi konfigurasi Firebase dulu'); return null; }
+  try{
+    const r = await fetch(db(path));
+    if(!r.ok){ log('❌ GET '+path+' → HTTP '+r.status+' (cek Rules firebase!)'); return null; }
+    return await r.json();
+  }catch(e){ log('❌ jaringan: '+e.message); return null; }
+}
+async function fbPut(path,obj){
+  if(!cfg.url){ log('❌ Isi konfigurasi Firebase dulu'); return false; }
+  try{
+    const r = await fetch(db(path),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)});
+    if(!r.ok){ log('❌ PUT '+path+' → HTTP '+r.status+' (Rules menolak write — lihat README)'); return false; }
+    return true;
+  }catch(e){ log('❌ jaringan: '+e.message); return false; }
+}
+
+/* ================= DAFTAR PERANGKAT ================= */
+async function loadDevices(){
+  devices = (await fbGet('/devices')) || {};
+  const el = document.getElementById('devList');
+  const ids = Object.keys(devices);
+  if(!ids.length){ el.innerHTML='<div class="sub">Belum ada perangkat terdaftar. Buka aplikasi parental di HP anak lalu tekan “Sinkronkan”.</div>'; return; }
+  el.innerHTML='';
+  for(const id of ids){
+    const st = devices[id].state || {};
+    const online = st.lastSeen && (Date.now()-st.lastSeen < 20000);
+    const d = document.createElement('div');
+    d.className='dev'+(id===selected?' sel':'');
+    d.onclick=(ev)=>selectDevice(id, ev.currentTarget);
+    d.innerHTML = '<div class="nm">'+esc(st.model||id)+'</div>'+
+      '<div class="st"><span><span class="dot '+(online?'on':'off')+'"></span>'+(online?'Online':'Offline')+'</span>'+
+      '<span>Android '+(st.androidVersion||'?')+'</span></div>'+
+      '<div class="st" style="margin-top:6px">'+
+        '<span class="badge '+(st.lockEnabled?'b-ok':'b-bad')+'">Layar: '+(st.lockEnabled?'TERKUNCI':'bebas')+'</span> '+
+        '<span class="badge '+( (st.blockedPackages&&st.blockedPackages.length)?'b-ok':'b-bad')+'">'+((st.blockedPackages&&st.blockedPackages.length)||0)+' app diblokir</span>'+
+      '</div>'+
+      '<div class="sub" style="margin-top:4px;word-break:break-all">'+esc(id)+'</div>';
+    el.appendChild(d);
+  }
+  if(selected && devices[selected]) syncPanelFromDevice();
+}
+
+function selectDevice(id, el){
+  selected = id;
+  document.querySelectorAll('.dev').forEach(x=>x.classList.remove('sel'));
+  if(el) el.classList.add('sel');
+  const st=(devices[id]&&devices[id].state)||{};
+  document.getElementById('selDev').textContent='Perangkat: '+(st.model||id);
+  pendingBlocked = new Set(st.blockedPackages||[]);
+  syncPanelFromDevice();
+  renderApps();
+  log('Perangkat dipilih: '+id);
+}
+
+function syncPanelFromDevice(){
+  const st=(devices[selected]&&devices[selected].state)||{};
+  document.getElementById('lockSw').checked=!!st.lockEnabled;
+  document.getElementById('lockStat').textContent='status: '+(st.lockEnabled?'ON (terkunci)':'OFF');
+}
+
+/* ================= COMMANDS (write dari panel) ================= */
+async function pushCommand(extra){
+  if(!selected){ log('❌ Pilih perangkat dulu'); return; }
+  const cur = (await fbGet('/devices/'+selected+'/commands')) || {};
+  const cmd = Object.assign({}, cur, extra, {ts: Date.now(), from:'web-panel'});
+  const ok = await fbPut('/devices/'+selected+'/commands', cmd);
+  if(ok) log('✅ Perintah terkirim → perangkat akan menerapkan ≤ 5 detik');
+  // update tampilan lokal
+  if(!devices[selected]) devices[selected]={};
+  devices[selected].commands = cmd;
+}
+
+async function sendLock(on){ await pushCommand({lockEnabled:on}); }
+async function sendCmd(o){ await pushCommand(o); }
+
+async function sendPassword(){
+  const p=document.getElementById('pw').value;
+  if(p.length<4){ log('❌ Password minimal 4 karakter'); return; }
+  await pushCommand({password:p});
+  document.getElementById('pw').value='';
+}
+
+/* ================= BLOKIR APLIKASI ================= */
+async function applyBlock(){
+  if(!selected){ log('❌ Pilih perangkat dulu'); return; }
+  await pushCommand({blockedPackages:[...pendingBlocked]});
+  log('🚫 Daftar blokir dikirim: '+(pendingBlocked.size? [...pendingBlocked].join(', ') : '(kosong — semua dibuka)'));
+}
+
+async function loadAppsForDevice(){
+  if(!selected){ log('❌ Pilih perangkat dulu'); return; }
+  // aplikasi dilaporkan perangkat lewat node "apps" (lihat langkah di README)
+  let a = await fbGet('/devices/'+selected+'/apps');
+  if(!a){
+    log('ℹ️ Node apps belum ada di DB. Mengirim permintaan refresh…');
+    await pushCommand({refreshApps:true});
+    a = await fbGet('/devices/'+selected+'/apps');
+  }
+  if(a && Array.isArray(a.apps)) appCatalog=a.apps; else if(a && typeof a==='object') appCatalog=Object.values(a);
+  renderApps();
+  if(appCatalog.length) log('✅ '+appCatalog.length+' aplikasi dimuat dari perangkat');
+}
+
+function renderApps(){
+  const q=(document.getElementById('aq').value||'').toLowerCase();
+  const box=document.getElementById('appBox');
+  document.getElementById('blkN').textContent=pendingBlocked.size;
+  if(!appCatalog.length){ box.innerHTML='<div class="sub">Klik “Muat Daftar Aplikasi”. (Daftar dikirim aplikasi anak ke node <code>devices/{id}/apps</code>)</div>'; return; }
+  box.innerHTML='';
+  for(const ap of appCatalog){
+    if(q && !((ap.name||'').toLowerCase().includes(q)||(ap.pkg||'').toLowerCase().includes(q))) continue;
+    const on = pendingBlocked.has(ap.pkg);
+    const d=document.createElement('div'); d.className='app';
+    d.innerHTML='<div><div class="nm">'+esc(ap.name)+'</div><div class="pk">'+esc(ap.pkg)+'</div></div>'+
+      '<label class="sw"><input type="checkbox" '+(on?'checked':'')+'><span class="sl"></span></label>';
+    d.querySelector('input').addEventListener('change',function(){
+      this.checked?pendingBlocked.add(ap.pkg):pendingBlocked.delete(ap.pkg);
+      document.getElementById('blkN').textContent=pendingBlocked.size;
+    });
+    box.appendChild(d);
+  }
+}
+
+/* ================= AUTO REFRESH ================= */
+setInterval(()=>{ if(cfg.url) loadDevices(); }, 8000);
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+loadDevices();
+</script>
+</body>
+</html>
