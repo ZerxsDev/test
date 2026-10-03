@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">parental</string>
+
+    <!-- ===== FIREBASE SPARK PLAN — GANTI dengan nilai proyek Anda (Firebase Console > Project Settings) ===== -->
+    <string name="firebase_database_url">https://parental-default-rtdb.firebaseio.com</string>
+    <string name="firebase_application_id">1:000000000000:android:0000000000000000000000</string>
+    <string name="firebase_api_key">AIzaSy_REPLACE_WITH_YOUR_REAL_API_KEY</string>
+    <string name="firebase_project_id">parental</string>
+    <string name="firebase_storage_bucket">parental.appspot.com</string>
+    <string name="firebase_sender_id">000000000000</string>
+
+    <string name="lock_now">Kunci Layar Sekarang</string>
+    <string name="unlock_policy">Buka Kebijakan Kunci</string>
+    <string name="enable_admin">Aktifkan Device Admin</string>
+    <string name="disable_admin">Nonaktifkan Device Admin</string>
+</resources>

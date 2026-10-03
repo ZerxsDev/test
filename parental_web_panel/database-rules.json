@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "devices": {
+      "$deviceId": {
+        ".read": true,
+        "state":        { ".write": true },
+        "apps":         { ".write": true },
+        "commands":     { ".write": true },
+        "commands_ack": { ".write": true }
+      }
+    }
+  }
+}

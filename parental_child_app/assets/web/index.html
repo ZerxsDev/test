@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>parental — kontrol anak</title>
+<style>
+  :root{--bg:#0f1622;--card:#182338;--line:#26344f;--txt:#e8eefb;--mut:#93a3c0;--ok:#22c55e;--bad:#ef4444;--acc:#1a73e8}
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--txt);padding:14px 14px 40px}
+  h1{font-size:19px;margin:2px 0 2px}
+  .sub{color:var(--mut);font-size:12px;margin-bottom:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .t{font-weight:600;font-size:14px}
+  .d{color:var(--mut);font-size:12px;margin-top:2px}
+  /* toggle */
+  .sw{position:relative;width:52px;height:30px;flex:0 0 auto}
+  .sw input{opacity:0;width:0;height:0}
+  .sl{position:absolute;inset:0;background:#3a4a68;border-radius:30px;transition:.2s;cursor:pointer}
+  .sl:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .sw input:checked + .sl{background:var(--ok)}
+  .sw input:checked + .sl:before{transform:translateX(22px)}
+  input[type=password],input[type=text]{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:#0d1523;color:var(--txt);font-size:14px;margin-top:8px}
+  button{border:0;border-radius:9px;padding:10px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .btn-p{background:var(--acc);color:#fff;width:100%;margin-top:10px}
+  .btn-r{background:#33415e;color:var(--txt)}
+  .pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+  .p-ok{background:rgba(34,197,94,.15);color:var(--ok)}
+  .p-bad{background:rgba(239,68,68,.15);color:var(--bad)}
+  .perm{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .perm:last-child{border-bottom:0}
+  #appList{max-height:340px;overflow:auto;margin-top:8px}
+  .app{display:flex;align-items:center;justify-content:space-between;padding:9px 4px;border-bottom:1px solid var(--line)}
+  .app .nm{font-size:13px}.app .pk{font-size:11px;color:var(--mut)}
+  .search{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:#0d1523;color:var(--txt);margin-top:8px}
+  .log{font-size:11px;color:var(--mut);margin-top:8px;min-height:16px}
+  .head-info{font-size:11px;color:var(--mut);word-break:break-all}
+</style>
+</head>
+<body>
+
+<h1>👨‍👩‍👧 parental — Panel Anak</h1>
+<div class="sub" id="devInfo">memuat perangkat…</div>
+
+<!-- ============ KUNCI LAYAR ANAK (ON/OFF via HTML PASSWORD) ============ -->
+<div class="card">
+  <div class="row">
+    <div>
+      <div class="t">🔒 Kunci Layar Anak</div>
+      <div class="d">Nyalakan untuk mengunci layar perangkat ini. Dimatikan dengan password.</div>
+    </div>
+    <label class="sw"><input type="checkbox" id="lockSw" onchange="toggleLock(this.checked)"><span class="sl"></span></label>
+  </div>
+
+  <div id="pwArea">
+    <input type="password" id="pw1" placeholder="Password kunci layar baru (min 4 karakter)">
+    <input type="password" id="pw2" placeholder="Ulangi password">
+    <button class="btn-p" onclick="savePassword()">💾 Simpan Password</button>
+  </div>
+  <div id="unlockArea" style="display:none">
+    <input type="password" id="pwUnlock" placeholder="Masukkan password untuk membuka">
+    <button class="btn-p" onclick="tryUnlock()">🔓 Buka Kunci</button>
+  </div>
+  <div class="log" id="lockLog"></div>
+</div>
+
+<!-- ============ IZIN SISTEM ============ -->
+<div class="card">
+  <div class="t" style="margin-bottom:6px">⚙️ Izin Sistem</div>
+  <div class="perm"><span>Device Admin (kunci layar)</span>
+    <span><span class="pill p-bad" id="admPill">OFF</span> <button class="btn-r" onclick="A.requestAdmin()">Aktifkan</button></span></div>
+  <div class="perm"><span>Tampilan di atas aplikasi lain (blokir)</span>
+    <span><span class="pill p-bad" id="ovlPill">OFF</span> <button class="btn-r" onclick="A.requestOverlay()">Buka</button></span></div>
+  <div class="perm"><span>Akses penggunaan (deteksi aplikasi)</span>
+    <span><span class="pill p-bad" id="usgPill">OFF</span> <button class="btn-r" onclick="A.requestUsageAccess()">Buka</button></span></div>
+</div>
+
+<!-- ============ BLOKIR APLIKASI (ON/OFF via HTML) ============ -->
+<div class="card">
+  <div class="row">
+    <div>
+      <div class="t">🚫 Blokir Aplikasi</div>
+      <div class="d"><span id="blkCount">0</span> aplikasi diblokir</div>
+    </div>
+    <button class="btn-r" onclick="loadApps()">⟳ Muat Ulang</button>
+  </div>
+  <input class="search" id="q" placeholder="Cari aplikasi…" oninput="renderApps()">
+  <div id="appList"></div>
+  <div class="log" id="blkLog"></div>
+</div>
+
+<button class="btn-p" onclick="syncNow()">📡 Sinkronkan ke Firebase Sekarang</button>
+<div class="head-info" id="dbInfo"></div>
+
+<script>
+const A = window.ParentalAndroid || null;
+let apps = [];
+let hasPass = false;
+let lockOn = false;
+
+function log(id,msg){ const e=document.getElementById(id); if(e) e.textContent = msg + "  •  " + new Date().toLocaleTimeString(); }
+
+function boot(){
+  if(!A){ document.getElementById('devInfo').textContent='Jembatan Android tidak tersedia (buka lewat aplikasi parental).'; return; }
+  try{
+    const info = JSON.parse(A.getInfo());
+    document.getElementById('devInfo').textContent = info.model + ' • Android ' + info.android + ' • ' + info.package;
+    document.getElementById('dbInfo').textContent = 'Firebase RTDB: ' + (info.dbUrl||'(belum diisi)') + (info.firebaseReady?' ✅':' ⚠️ isi API key di res/values/strings.xml');
+  }catch(e){}
+  refresh(); loadApps();
+}
+
+function refresh(){
+  if(!A) return;
+  try{ const s = JSON.parse(A.getStatus()); apply(s); }catch(e){}
+}
+
+function apply(s){
+  setPill('admPill', s.adminActive); setPill('ovlPill', s.overlayAllowed); setPill('usgPill', s.usageAllowed);
+  lockOn = !!s.lockEnabled; hasPass = !!s.passwordSet;
+  document.getElementById('lockSw').checked = lockOn;
+  document.getElementById('pwArea').style.display   = hasPass ? 'none' : 'block';
+  document.getElementById('unlockArea').style.display= hasPass ? 'block' : 'none';
+  if(s.blockedPackages){
+    const set = new Set(s.blockedPackages);
+    let n=0; for(const a of apps){ a.blocked = set.has(a.pkg); if(a.blocked) n++; }
+    if(n===0 && s.blockedPackages.length) n=s.blockedPackages.length;
+    document.getElementById('blkCount').textContent = n;
+    renderApps();
+  }
+}
+
+function setPill(id,on){ const e=document.getElementById(id); e.textContent=on?'ON':'OFF'; e.className='pill '+(on?'p-ok':'p-bad'); }
+
+/* ---------- KUNCI LAYAR + PASSWORD ---------- */
+function savePassword(){
+  const p1=document.getElementById('pw1').value, p2=document.getElementById('pw2').value;
+  if(p1.length<4){ log('lockLog','❌ Password minimal 4 karakter'); return; }
+  if(p1!==p2){ log('lockLog','❌ Password tidak sama'); return; }
+  A.setPassword(p1); hasPass=true;
+  document.getElementById('pw1').value=''; document.getElementById('pw2').value='';
+  document.getElementById('pwArea').style.display='none';
+  document.getElementById('unlockArea').style.display='block';
+  log('lockLog','✅ Password disimpan');
+}
+
+function toggleLock(on){
+  if(!A) return;
+  if(on){
+    if(!hasPass){ document.getElementById('lockSw').checked=false; log('lockLog','❌ Buat password dulu sebelum mengunci'); return; }
+    const r=JSON.parse(A.setLock(true));
+    if(r.ok){ lockOn=true; log('lockLog','🔒 Layar terkunci'); }
+    else { document.getElementById('lockSw').checked=false; log('lockLog','⚠️ Aktifkan Device Admin dulu (lihat Izin Sistem)'); }
+  }else{
+    document.getElementById('lockSw').checked=true; // tetap ON sampai password benar
+    tryUnlockFromToggle();
+  }
+}
+
+function tryUnlockFromToggle(){
+  const v=prompt('Masukkan password kunci layar:');
+  if(v===null){ document.getElementById('lockSw').checked=lockOn; return; }
+  checkPass(v,(ok)=>{
+    if(ok){ A.setLock(false); A.unlockNow(); lockOn=false; document.getElementById('lockSw').checked=false; log('lockLog','🔓 Layar dibuka'); }
+    else { document.getElementById('lockSw').checked=true; log('lockLog','❌ Password salah'); }
+  });
+}
+
+function tryUnlock(){
+  const v=document.getElementById('pwUnlock').value;
+  checkPass(v,(ok)=>{
+    if(ok){ A.setLock(false); A.unlockNow(); lockOn=false; document.getElementById('lockSw').checked=false;
+            document.getElementById('pwUnlock').value=''; log('lockLog','🔓 Layar dibuka'); }
+    else log('lockLog','❌ Password salah');
+  });
+}
+
+/** Verifikasi password lokal lewat status native (hash disamakan di sisi android lewat getStatus). */
+function checkPass(v,cb){
+  // bandingkan dengan password yang tersimpan melalui bridge khusus
+  try{
+    const ok = (A.verifyPassword(v) === 'true');
+    cb(ok);
+  }catch(e){ cb(false); }
+}
+
+/* ---------- BLOKIR APLIKASI ---------- */
+function loadApps(){
+  if(!A) return;
+  try{ apps = JSON.parse(A.listApps()); renderApps(); }catch(e){}
+}
+
+function renderApps(){
+  const q=(document.getElementById('q').value||'').toLowerCase();
+  const el=document.getElementById('appList'); el.innerHTML='';
+  let n=0; for(const a of apps) if(a.blocked) n++;
+  document.getElementById('blkCount').textContent=n;
+  for(const a of apps){
+    if(q && !((a.name||'').toLowerCase().includes(q) || a.pkg.toLowerCase().includes(q))) continue;
+    const d=document.createElement('div'); d.className='app';
+    d.innerHTML='<div><div class="nm">'+esc(a.name)+'</div><div class="pk">'+esc(a.pkg)+'</div></div>'+
+      '<label class="sw"><input type="checkbox" '+(a.blocked?'checked':'')+' data-pkg="'+esc(a.pkg)+'"><span class="sl"></span></label>';
+    d.querySelector('input').addEventListener('change',function(){
+      const r=JSON.parse(A.blockApp(this.dataset.pkg,this.checked));
+      a.blocked=this.checked; log('blkLog',(this.checked?'🚫 Diblokir: ':'✅ Dibuka: ')+a.name);
+      if(!r.ok) log('blkLog','⚠️ gagal');
+      let c=0; for(const x of apps) if(x.blocked) c++; document.getElementById('blkCount').textContent=c;
+    });
+    el.appendChild(d);
+  }
+}
+
+function esc(s){ return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function syncNow(){ if(A){ A.syncNow(); log('blkLog','📡 Sinkronisasi dijalankan'); } }
+
+/* dipanggil native saat status berubah */
+window.onNativeStatus = function(s){ apply(s); };
+
+boot();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
