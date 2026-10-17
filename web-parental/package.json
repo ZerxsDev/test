@@ -1,0 +1,21 @@
+{
+  "name": "parental",
+  "version": "1.0.0",
+  "description": "Web Parental Control panel untuk aplikasi children control (com.company.children)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "parental-control",
+    "socket.io",
+    "children"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}

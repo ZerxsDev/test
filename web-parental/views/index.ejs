@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PARENTAL - Masuk</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <div class="logo">🛡️</div>
+    <h1>PARENTAL</h1>
+    <p class="subtitle">Web Parental Control — v1.0.0</p>
+
+    <% if (error) { %>
+      <div class="alert"><%= error %></div>
+    <% } %>
+
+    <p>Masukkan <b>6 digit kode</b> yang tampil di aplikasi <b>children</b> pada HP anak untuk menautkan perangkat.</p>
+
+    <form method="POST" action="/pair" class="pair-form">
+      <input type="text" name="code" id="code" inputmode="numeric" maxlength="6"
+             pattern="\d{6}" placeholder="Contoh: 482913" autocomplete="off" required>
+      <button type="submit">Tautkan Perangkat</button>
+    </form>
+
+    <p class="server-info">Server: <%= ngrok %> &nbsp;|&nbsp; LPORT 8000 (via ngrok tunnel)</p>
+  </div>
+</body>
+</html>

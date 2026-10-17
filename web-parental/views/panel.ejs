@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PARENTAL - Panel</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🛡️ PARENTAL <span>v1.0.0</span></div>
+    <div class="conn">
+      <span id="conn-dot" class="dot dot-grey"></span><span id="conn-text">menghubungkan…</span>
+      <a href="/" class="logout">Ganti Perangkat</a>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- ============ KOTAK INFO PERANGKAT ============ -->
+    <section class="card" id="card-info">
+      <h2>📱 Info Perangkat</h2>
+      <div class="info-row"><label>Status</label><span id="dev-online" class="badge badge-off">OFFLINE</span></div>
+      <div class="info-row"><label>Device ID</label><span id="dev-id" class="mono"><%= deviceId %></span></div>
+      <div class="info-row"><label>Model</label><span id="dev-model">—</span></div>
+      <div class="info-row"><label>Android</label><span id="dev-android">—</span></div>
+      <div class="info-row"><label>Baterai</label><span id="dev-battery">—</span></div>
+      <div class="info-row"><label>Aplikasi aktif</label><span id="dev-current">—</span></div>
+      <div class="info-row"><label>Pairing code</label><span id="dev-code" class="mono">—</span></div>
+      <div class="info-row"><label>Ditautkan</label><span id="dev-paired">—</span></div>
+      <div class="info-row"><label>Terakhir terlihat</label><span id="dev-lastseen">—</span></div>
+      <button id="btn-ping" class="btn btn-ghost">Ping HP Anak</button>
+      <p id="ping-result" class="small muted"></p>
+    </section>
+
+    <!-- ============ KOTAK CONTROL ============ -->
+    <section class="card" id="card-control">
+      <h2>🎛️ Control</h2>
+
+      <!-- --- Kunci layar anak --- -->
+      <div class="control-block">
+        <div class="control-head">
+          <h3>🔒 Kunci Layar Anak</h3>
+          <label class="switch" title="On/Off">
+            <input type="checkbox" id="sw-lock">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="indicator"><span id="lock-ind" class="badge badge-off">OFF</span></div>
+        <div class="row">
+          <input type="text" id="lock-pass" placeholder="Buat password untuk anak" autocomplete="off">
+          <button id="btn-save-lock" class="btn">Terapkan</button>
+        </div>
+        <p class="current">Password saat ini: <b id="lock-pass-show" class="mono">—</b></p>
+        <p class="small muted">Jika ON, HP anak akan terkunci overlay sampai password ini dimasukkan atau orang tua mematikannya dari sini.</p>
+      </div>
+
+      <hr>
+
+      <!-- --- Blokir aplikasi --- -->
+      <div class="control-block">
+        <div class="control-head">
+          <h3>🚫 Blokir Aplikasi</h3>
+          <label class="switch" title="On/Off">
+            <input type="checkbox" id="sw-block">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="indicator"><span id="block-ind" class="badge badge-off">OFF</span></div>
+        <div class="row">
+          <input type="text" id="block-input" placeholder="Package / nama aplikasi (mis. com.android.chrome)">
+          <button id="btn-add-block" class="btn">Blokir</button>
+        </div>
+        <ul id="block-list" class="block-list"></ul>
+        <p class="small muted">Masukkan package name aplikasi (bisa dilihat di setelan > info aplikasi, atau lewat label yang dipilih). Aplikasi yang diblokir akan langsung tertutup overlay di HP anak.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const DEVICE_ID = '<%= deviceId %>';
+    const socket = io();
+
+    const $ = (id) => document.getElementById(id);
+    let control = { screenLock: { active:false, password:'' }, blockedApps: [], lockAll:false };
+
+    function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'),2600); }
+
+    function renderControl(){
+      $('sw-lock').checked = !!control.screenLock.active;
+      $('lock-ind').textContent = control.screenLock.active ? 'ON' : 'OFF';
+      $('lock-ind').className = 'badge ' + (control.screenLock.active ? 'badge-on':'badge-off');
+      $('lock-pass-show').textContent = control.screenLock.password || '—';
+
+      $('sw-block').checked = !!control.lockAll;
+      $('block-ind').textContent = control.lockAll ? 'ON' : 'OFF';
+      $('block-ind').className = 'badge ' + (control.lockAll ? 'badge-on':'badge-off');
+
+      const ul = $('block-list'); ul.innerHTML='';
+      if(!control.blockedApps.length){
+        ul.innerHTML = '<li class="muted small">Belum ada aplikasi diblokir.</li>';
+      }
+      control.blockedApps.forEach(pkg=>{
+        const li=document.createElement('li');
+        const s=document.createElement('span'); s.className='mono'; s.textContent=pkg;
+        const b=document.createElement('button'); b.textContent='✕ hapus'; b.className='mini';
+        b.onclick=()=>{ control.blockedApps = control.blockedApps.filter(p=>p!==pkg); send(); };
+        li.append(s,b); ul.appendChild(li);
+      });
+    }
+
+    function send(){
+      socket.emit('parent:control', control);
+      // server juga broadcast 'control:update' — render lokal langsung agar responsif
+      renderControl();
+      toast('Control dikirim ke HP anak ✔');
+    }
+
+    /* ---------- koneksi & join ---------- */
+    socket.on('connect', ()=>{
+      $('conn-dot').className='dot dot-green'; $('conn-text').textContent='terhubung ke server';
+      socket.emit('parent:watch',{deviceId:DEVICE_ID});
+      socket.emit('parent:join',{deviceId:DEVICE_ID},(res)=>{
+        if(res.ok){ control=res.control; renderControl(); refreshInfo(); }
+        else { toast(res.error||'Gagal menautkan'); location.href='/'; }
+      });
+    });
+    socket.on('disconnect', ()=>{ $('conn-dot').className='dot dot-red'; $('conn-text').textContent='terputus'; });
+
+    socket.on('control:update',(c)=>{ control=c; renderControl(); });
+
+    socket.on('child:status',(s)=>{
+      setOnline(s.online);
+      if(s.battery!=null) $('dev-battery').textContent = s.battery+'%';
+      if(s.currentApp) $('dev-current').textContent = s.currentApp;
+      $('dev-lastseen').textContent = new Date().toLocaleTimeString();
+    });
+
+    function setOnline(on){
+      const b=$('dev-online');
+      b.textContent = on?'ONLINE':'OFFLINE';
+      b.className = 'badge '+(on?'badge-on':'badge-off');
+    }
+
+    async function refreshInfo(){
+      try{
+        const r = await fetch('/api/device/'+encodeURIComponent(DEVICE_ID));
+        const j = await r.json();
+        setOnline(j.online);
+        $('dev-model').textContent = (j.pairing && j.pairing.deviceModel) || '—';
+        $('dev-android').textContent = (j.pairing && j.pairing.androidVersion) || '—';
+        $('dev-battery').textContent = j.battery!=null? j.battery+'%' : '—';
+        $('dev-current').textContent = (j.pairing && j.pairing.currentApp) || '—';
+        $('dev-code').textContent = j.pairingCode || '—';
+        $('dev-paired').textContent = j.pairedAt? new Date(j.pairedAt).toLocaleString():'—';
+        $('dev-lastseen').textContent = j.lastSeen? new Date(j.lastSeen).toLocaleString():'—';
+      }catch(e){ console.error(e); }
+    }
+    // sisipkan deviceModel ke /api — tambahkan field pairing di response
+    setInterval(refreshInfo, 15000);
+
+    /* ---------- event UI ---------- */
+    $('sw-lock').addEventListener('change', e=>{
+      control.screenLock.active = e.target.checked;
+      if(control.screenLock.active && !control.screenLock.password){
+        toast('Buat password dulu sebelum mengaktifkan kunci layar!');
+        $('sw-lock').checked=false; control.screenLock.active=false; renderControl(); return;
+      }
+      send();
+    });
+    $('btn-save-lock').addEventListener('click', ()=>{
+      const p = $('lock-pass').value.trim();
+      if(!p){ toast('Password kosong.'); return; }
+      control.screenLock.password = p;
+      $('lock-pass').value='';
+      send();
+    });
+    $('sw-block').addEventListener('change', e=>{ control.lockAll=e.target.checked; send(); });
+    $('btn-add-block').addEventListener('click', addBlock);
+    $('block-input').addEventListener('keydown', e=>{ if(e.key==='Enter') addBlock(); });
+    function addBlock(){
+      const v=$('block-input').value.trim();
+      if(!v){ toast('Isi package / nama aplikasi dulu.'); return; }
+      if(!control.blockedApps.includes(v)) control.blockedApps.push(v);
+      $('block-input').value='';
+      if(!control.lockAll){ control.lockAll=true; $('sw-block').checked=true; }
+      send();
+    }
+    $('btn-ping').addEventListener('click', ()=>{
+      $('ping-result').textContent='meming…';
+      socket.timeout(6000).emit('parent:ping-child',{deviceId:DEVICE_ID},(err,res)=>{
+        $('ping-result').textContent = (!err && res && res.ok) ? ('HP anak merespons: '+JSON.stringify(res.resp)) : 'HP anak tidak merespons / offline.';
+      });
+    });
+  </script>
+</body>
+</html>
