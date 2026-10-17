@@ -1,0 +1,17 @@
+// Top-level build file — PARENTAL/children project (Gradle 8.7, AGP 8.5.2)
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.5.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

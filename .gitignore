@@ -1,0 +1,14 @@
+.gradle/
+build/
+target/
+*.apk
+*.aab
+local.properties
+*.zip
+*.tar.gz
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local

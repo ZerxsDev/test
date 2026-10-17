@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <!-- ============ FRAGMENT 1 : IZIN ============ -->
+    <ScrollView android:id="@+id/permStep" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="24dp">
+            <ImageView android:layout_width="72dp" android:layout_height="72dp"
+                android:src="@drawable/ic_shield" android:layout_gravity="center_horizontal" android:contentDescription="@string/app_name"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="@string/app_name" android:textSize="26sp" android:textStyle="bold"
+                android:textColor="@color/text" android:layout_gravity="center_horizontal" android:layout_marginTop="8dp"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/step_permission_title" android:textSize="18sp" android:textStyle="bold"
+                android:textColor="@color/text" android:gravity="center" android:layout_marginTop="24dp"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="@string/step_permission_desc" android:textColor="@color/muted"
+                android:gravity="center" android:layout_marginTop="6dp"/>
+
+            <TextView android:id="@+id/rowNotif" style="@style/PermRow" android:text="🔔  Notifikasi (POST_NOTIFICATIONS)"/>
+            <TextView android:id="@+id/rowOverlay" style="@style/PermRow" android:text="🪟  Tampilan di atas aplikasi lain (Overlay)"/>
+            <TextView android:id="@+id/rowUsage" style="@style/PermRow" android:text="📊  Akses penggunaan aplikasi (Usage Stats)"/>
+            <TextView android:id="@+id/rowAdmin" style="@style/PermRow" android:text="🛡️  Device Admin (Kunci Perangkat)"/>
+
+            <Button android:id="@+id/btnGrantAll" android:layout_width="match_parent" android:layout_height="56dp"
+                android:layout_marginTop="24dp" android:background="@drawable/btn_primary"
+                android:text="Beri Semua Izin Sekarang" android:textColor="#FFFFFF" android:textStyle="bold"
+                android:textAllCaps="false" android:textSize="16sp"/>
+            <TextView android:id="@+id/permHint" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/red" android:gravity="center" android:layout_marginTop="10dp" android:textSize="13px"
+                android:text="Semua izin wajib diisi (kecuali launcher) sebelum lanjut."/>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ============ FRAGMENT 2 : PAIRING CODE ============ -->
+    <LinearLayout android:id="@+id/pairStep" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:gravity="center" android:padding="28dp" android:visibility="gone">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Hubungkan ke Web Parental" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/text"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp"
+            android:text="Masukkan kode berikut di website PARENTAL:\nhttps://friday-succulent-marigold.ngrok-free.dev"
+            android:textColor="@color/muted" android:gravity="center" android:textSize="13sp"/>
+        <TextView android:id="@+id/tvCode" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="26dp" android:background="@drawable/bg_code" android:padding="22dp"
+            android:text="------" android:textColor="@color/text" android:textSize="40sp" android:textStyle="bold"
+            android:letterSpacing="0.35" android:gravity="center"/>
+        <TextView android:id="@+id/tvPairStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:text="Menghubungkan ke server…" android:textColor="@color/muted" android:textSize="14sp"/>
+        <ProgressBar android:id="@+id/pbPair" android:layout_width="30dp" android:layout_height="30dp" android:layout_marginTop="14dp"/>
+    </LinearLayout>
+
+    <!-- ============ FRAGMENT 3 : DASHBOARD ANAK ============ -->
+    <ScrollView android:id="@+id/dashStep" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Dashboard Anak" android:textSize="22sp" android:textStyle="bold" android:textColor="@color/text"/>
+            <TextView android:id="@+id/tvDashSub" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Perangkat terhubung ke orang tua ✔" android:textColor="@color/green" android:textSize="13sp" android:layout_marginTop="4dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:background="@drawable/bg_card" android:padding="18dp" android:layout_marginTop="18dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Status Koneksi" android:textColor="@color/muted" android:textSize="13sp"/>
+                <TextView android:id="@+id/tvConnState" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Terhubung" android:textColor="@color/green" android:textSize="18sp" android:textStyle="bold"/>
+                <TextView android:id="@+id/tvServerInfo" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/muted" android:textSize="11sp"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:background="@drawable/bg_card" android:padding="18dp" android:layout_marginTop="14dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kontrol Orang Tua Aktif" android:textColor="@color/muted" android:textSize="13sp"/>
+                <TextView android:id="@+id/tvLockState" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kunci layar : OFF" android:textColor="@color/text" android:textSize="15sp" android:layout_marginTop="8dp"/>
+                <TextView android:id="@+id/tvBlockState" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Blokir aplikasi : OFF (0 aplikasi)" android:textColor="@color/text" android:textSize="15sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:background="@drawable/bg_card" android:padding="18dp" android:layout_marginTop="14dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kode Perangkat Anda" android:textColor="@color/muted" android:textSize="13sp"/>
+                <TextView android:id="@+id/tvDashCode" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="------" android:textColor="@color/primary" android:textSize="34sp" android:textStyle="bold" android:letterSpacing="0.3" android:layout_marginTop="6dp"/>
+                <Button android:id="@+id/btnRecheck" android:layout_width="match_parent" android:layout_height="46dp" android:layout_marginTop="12dp"
+                    android:background="@drawable/btn_primary" android:text="Cek Ulang Koneksi" android:textColor="#FFFFFF" android:textAllCaps="false"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

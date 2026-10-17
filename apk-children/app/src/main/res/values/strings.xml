@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">children</string>
+    <string name="device_admin_desc">Diperlukan oleh orang tua untuk mengunci perangkat anak dari jarak jauh.</string>
+    <string name="step_permission_title">Izin diperlukan</string>
+    <string name="step_permission_desc">Aplikasi children butuh izin berikut agar kontrol orang tua berfungsi:</string>
+</resources>
